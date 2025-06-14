@@ -24,7 +24,6 @@ set directory=~/.vim/swap/,/tmp/vim/swap/
 set maxmempattern=8000
 
 set smartcase
-set textwidth=120
 
 " Colors
 colorscheme habamax
@@ -87,7 +86,7 @@ runtime! ncm-autocomplete.vim
 
 " Dbext
 " Not currently used but I have this snippet to open Notes.app in vim
-" let g:dbext_default_profile_Notes = 'type=SQLITE:SQLITE_bin=/usr/local/bin/sqlite3:dbname=/Users/ankeet.presswala/Library/Group\ Containers/group.com.apple.notes/NoteStore.sqlite'
+let g:dbext_default_profile_Notes = 'type=SQLITE:SQLITE_bin=/usr/local/bin/sqlite3:dbname=/Users/ankeet.presswala/Library/Group\ Containers/group.com.apple.notes/NoteStore.sqlite'
 
 
 " Pager function on :P for like command args
@@ -101,3 +100,12 @@ set clipboard+=unnamedplus
 for f in split(globpath('~/.vim/hacks/', '*.vim'), '\n')
   exe 'source' f
 endfor
+set textwidth=400
+
+
+let g:xml_syntax_folding=1
+au FileType xml setlocal foldmethod=syntax
+set foldmethod=indent
+let &foldtext = "EightHeaderFolds( '\\=s:fullwidth-4', 'left', [ repeat( '  ', v:foldlevel + 1 ), '.', '' ], '\\= s:foldlines . \" lines\"', '' )"
+
+set foldopen+=jump
