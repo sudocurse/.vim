@@ -1,4 +1,4 @@
-#!/Users/ankeet/cfg/vim/vimpy/bin/python3
+#!/Users/ankeet/.vim/vimpy/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
