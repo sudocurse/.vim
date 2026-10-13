@@ -5,3 +5,5 @@ undodir/
 *.gitplaceholder
 pack/*
 tags
+vimpy/
+.idea/

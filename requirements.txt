@@ -2,9 +2,12 @@ docstring-to-markdown==0.17
 greenlet==3.2.3
 importlib_metadata==8.7.0
 jedi==0.19.2
+mccabe==0.7.0
 msgpack==1.1.1
 parso==0.8.4
 pluggy==1.6.0
+pycodestyle==2.15.0
+pyflakes==4.0.3
 pynvim==0.5.2
 python-lsp-jsonrpc==1.1.2
 python-lsp-server==1.12.2

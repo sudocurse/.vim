@@ -1,87 +1,44 @@
--- =============================================================================
--- LSP Configuration (Neovim)
--- =============================================================================
+-- LSP setup using the native API (nvim 0.11+). Server definitions (cmd, filetypes,
+-- root markers) come from nvim-lspconfig's lsp/*.lua; we only override what differs.
 
--- Only proceed if LSP is enabled and we have lspconfig
-if vim.g.enable_lsp == 0 then
-  return
-end
+local python = vim.g.python3_host_prog or 'python3'
 
-local has_lspconfig, lspconfig = pcall(require, 'lspconfig')
-if not has_lspconfig then
-  return
-end
-
--- LSP key mappings
-local opts = { noremap=true, silent=true }
-vim.keymap.set('n', '<space>e', vim.diagnostic.open_float, opts)
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, opts)
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next, opts)
-vim.keymap.set('n', '<space>q', vim.diagnostic.setloclist, opts)
-
-local on_attach = function(client, bufnr)
-  -- Enable completion triggered by <c-x><c-o>
-  vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
-
-  -- Buffer-local mappings
-  local bufopts = { noremap=true, silent=true, buffer=bufnr }
-  vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
-  vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
-  vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
-  vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
-  vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, bufopts)
-  vim.keymap.set('n', '<space>wa', vim.lsp.buf.add_workspace_folder, bufopts)
-  vim.keymap.set('n', '<space>wr', vim.lsp.buf.remove_workspace_folder, bufopts)
-  vim.keymap.set('n', '<space>wl', function()
-    print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-  end, bufopts)
-  vim.keymap.set('n', '<space>D', vim.lsp.buf.type_definition, bufopts)
-  vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, bufopts)
-  vim.keymap.set('n', '<space>ca', vim.lsp.buf.code_action, bufopts)
-  vim.keymap.set('n', 'gr', vim.lsp.buf.references, bufopts)
-  vim.keymap.set('n', '<space>f', vim.lsp.buf.formatting, bufopts)
-end
-
--- Enhanced hover and signature help
-local max_width = math.max(math.floor(vim.o.columns * 0.7), 100)
-local max_height = math.max(math.floor(vim.o.lines * 0.3), 30)
-
-local handlers = {}
-handlers['textDocument/hover'] = vim.lsp.with(
-  vim.lsp.handlers.hover,
-  { border = 'rounded', max_width = max_width, max_height = max_height }
-)
-
-handlers['textDocument/signatureHelp'] = vim.lsp.with(
-  vim.lsp.handlers.signature_help,
-  { border = 'rounded', max_width = max_width, max_height = max_height }
-)
-
--- Python LSP Configuration (if Python development is enabled)
-if vim.g.enable_python_dev ~= 0 then
-  local python3_host_prog = vim.g.python3_host_prog or 'python3'
-  
-  lspconfig.pylsp.setup({
-    on_attach = on_attach,
-    handlers = handlers,
-    cmd = { python3_host_prog, '-m', 'pylsp' },
+if os.getenv('TOUCH') then
+  -- TouchDesigner: run pyright (from PATH) and point it at TD's bundled interpreter.
+  vim.lsp.config('pyright', {
     settings = {
-      pylsp = {
-        plugins = {
-          pycodestyle = {
-            maxLineLength = 88
-          }
-        }
-      }
-    }
+      python = {
+        pythonPath = '/Applications/TouchDesigner.app/Contents/Frameworks/Python.framework/Versions/3.11/bin/python3.11',
+      },
+    },
   })
+  vim.lsp.enable('pyright')
+else
+  vim.lsp.config('pylsp', {
+    cmd = { python, '-m', 'pylsp' },
+    settings = { pylsp = { plugins = { pycodestyle = { maxLineLength = 88 } } } },
+  })
+  vim.lsp.enable('pylsp')
 end
 
--- Add other language servers here based on enabled features
--- Example: TypeScript/JavaScript
-if vim.g.enable_web_dev ~= 0 then
-  -- lspconfig.tsserver.setup({
-  --   on_attach = on_attach,
-  --   handlers = handlers,
-  -- })
-end
+-- Diagnostics (global). [d ]d [D ]D and <C-w>d are nvim defaults.
+vim.keymap.set('n', '<space>e', vim.diagnostic.open_float, { desc = 'line diagnostics' })
+vim.keymap.set('n', '<space>q', vim.diagnostic.setloclist, { desc = 'diagnostics to loclist' })
+
+-- Buffer mappings on attach. nvim already provides: K hover, grn rename, gra code
+-- action, grr references, gri implementation, grt type definition, gO symbols,
+-- <C-s> signature help (insert), <C-]> definition via tagfunc.
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('user_lsp', { clear = true }),
+  callback = function(ev)
+    local function m(lhs, rhs, desc)
+      vim.keymap.set('n', lhs, rhs, { buffer = ev.buf, silent = true, desc = desc })
+    end
+    m('gd',        vim.lsp.buf.definition,      'LSP definition')
+    m('gD',        vim.lsp.buf.declaration,     'LSP declaration')
+    m('<space>D',  vim.lsp.buf.type_definition, 'LSP type definition')
+    m('<space>rn', vim.lsp.buf.rename,          'LSP rename')
+    m('<space>ca', vim.lsp.buf.code_action,     'LSP code action')
+    m('<space>f',  function() vim.lsp.buf.format({ async = true }) end, 'LSP format')
+  end,
+})

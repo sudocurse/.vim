@@ -54,7 +54,7 @@ call minpac#add('preservim/tagbar')
 call minpac#add('vim-airline/vim-airline')
 call minpac#add('vim-airline/vim-airline-themes')
 call minpac#add('github/copilot.vim')
-" let b:copilot_enabled = 0
+let b:copilot_enabled = 0
 
 "Bclose is required for ranger.vim
 call minpac#add('francoiscabrol/ranger.vim') 
