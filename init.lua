@@ -1,9 +1,22 @@
 -- ~/.vim/init.lua : the whole Neovim config. Sourced from ~/.config/nvim/init.vim.
 -- Plugins: minpac.  :PluginUpdate installs/updates, :PluginClean removes unlisted ones.
+--
+-- On home-manager hosts config-flake sets vim.g.nix_managed before sourcing this
+-- file. Nix then owns the binary, plugins (programs.neovim.plugins), the python
+-- host (pylsp lives inside it) and CLI tools, so the minpac and venv blocks below
+-- are skipped. Keep the plugin list here and the one in
+-- home-manager/_mixins/users/ankeet/neovim.nix in sync by hand.
+local nix_managed = vim.g.nix_managed == true
+local is_mac = vim.fn.has('mac') == 1
 
 -- Options -------------------------------------------------------------------
 vim.g.mapleader = ','
-vim.g.python3_host_prog = vim.fn.expand('~/.vim/vimpy/bin/python')
+-- Python host: the nix wrapper sets python3_host_prog itself; elsewhere use the
+-- venv at ~/.vim/vimpy (python -m venv vimpy && vimpy/bin/pip install -r requirements.txt)
+local vimpy = vim.fn.expand('~/.vim/vimpy/bin/python')
+if not nix_managed and vim.fn.executable(vimpy) == 1 then
+  vim.g.python3_host_prog = vimpy
+end
 
 local o = vim.o
 o.number, o.relativenumber, o.showcmd = true, true, true
@@ -15,6 +28,8 @@ o.textwidth = 400
 o.undofile = true
 o.undodir = vim.fn.expand('~/.vim/undodir') .. '/'
 o.directory = vim.fn.expand('~/.vim/swap') .. '/,/tmp/vim/swap/'
+vim.fn.mkdir(vim.fn.expand('~/.vim/undodir'), 'p')   -- both are gitignored, so a
+vim.fn.mkdir(vim.fn.expand('~/.vim/swap'), 'p')      -- fresh clone lacks them
 o.foldmethod = 'indent'
 vim.opt.foldopen:append('jump')
 o.winborder = 'rounded'                  -- LSP hover / signature floats
@@ -23,6 +38,8 @@ vim.g.xml_syntax_folding = 1
 vim.cmd.colorscheme('habamax')
 
 -- Plugins (minpac) ------------------------------------------------------------
+-- Skipped under nix: programs.neovim.plugins puts the same set on the packpath.
+if not nix_managed then
 local minpac_dir = vim.fn.expand('~/.vim/pack/minpac/opt/minpac')
 if vim.fn.isdirectory(minpac_dir) == 0 then
   vim.fn.system({ 'git', 'clone', '--depth=1', 'https://github.com/k-takata/minpac.git', minpac_dir })
@@ -65,6 +82,7 @@ add('tpope/vim-scriptease', { type = 'opt' })
 
 vim.api.nvim_create_user_command('PluginUpdate', function() vim.fn['minpac#update']() end, {})
 vim.api.nvim_create_user_command('PluginClean', function() vim.fn['minpac#clean']() end, {})
+end -- not nix_managed
 
 -- Rarely used language stacks load only when their files show up. This is the
 -- replacement for the old g:enable_* switches.
@@ -91,8 +109,10 @@ vim.g.indent_guides_enable_on_vim_startup = 1
 vim.g.ranger_replace_netrw = 1
 vim.g.ranger_map_keys = 0            -- we map it ourselves below
 
-vim.g.dbext_default_profile_Notes =
-  'type=SQLITE:SQLITE_bin=/usr/local/bin/sqlite3:dbname=/Users/ankeet.presswala/Library/Group\\ Containers/group.com.apple.notes/NoteStore.sqlite'
+if is_mac then
+  vim.g.dbext_default_profile_Notes =
+    'type=SQLITE:SQLITE_bin=/usr/local/bin/sqlite3:dbname=/Users/ankeet.presswala/Library/Group\\ Containers/group.com.apple.notes/NoteStore.sqlite'
+end
 
 -- LSP (lua/lsp_config.lua); completion is in after/plugin/completion.lua
 require('lsp_config')
@@ -127,5 +147,7 @@ end, { nargs = 1, complete = 'command' })
 vim.api.nvim_create_autocmd('FileType', { pattern = 'xml', command = 'setlocal foldmethod=syntax' })
 vim.api.nvim_create_autocmd('FileType', { pattern = 'tidal', command = 'setlocal commentstring=--\\ %s' })
 
--- hacks/*.vim (iTerm split command lives there)
-for _, f in ipairs(vim.fn.glob('~/.vim/hacks/*.vim', true, true)) do vim.cmd.source(f) end
+-- hacks/*.vim (iTerm split command lives there; mac only)
+if is_mac then
+  for _, f in ipairs(vim.fn.glob('~/.vim/hacks/*.vim', true, true)) do vim.cmd.source(f) end
+end
